@@ -4,41 +4,45 @@ import { getPendingGoals } from "../http/get-pending-goals";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { createGoalCompletion } from "../http/create-goal-completion";
 
+// Defina o tipo PendingGoalsResponse se não estiver definido
+type PendingGoalsResponse = {
+    id: string;
+    title: string;
+    desiredWeeklyFrequency: number;
+    completionsCount: number;
+};
+
 export function PendingGoals() {
-    const queryClient = useQueryClient()
-    
-    const { data } = useQuery({
+    const queryClient = useQueryClient();
+
+    const { data } = useQuery<PendingGoalsResponse[]>({
         queryKey: ['pending-goals'],
         queryFn: getPendingGoals,
         staleTime: 1000 * 60, // 60 seconds
-      })
+    });
 
-      if(!data){
-        return null
-      }
+    if (!data) {
+        return null;
+    }
 
-      async function handleCompleteGoal(goalId: string) {
-        await createGoalCompletion(goalId)
+    async function handleCompleteGoal(goalId: string) {
+        await createGoalCompletion(goalId);
+        queryClient.invalidateQueries({ queryKey: ['summary'] });
+        queryClient.invalidateQueries({ queryKey: ['pending-goals'] });
+    }
 
-
-        queryClient.invalidateQueries({ queryKey: ['summary'] })
-        queryClient.invalidateQueries({ queryKey: ['pending-goals'] })
-      }
-
-    return(
+    return (
         <div className="flex flex-wrap gap-3">
-            {data.map(goal => {
-                return (
-                    <OutlineButton 
-                        key={goal.id} 
-                        disabled={goal.completionsCount >= goal.desiredWeeklyFrequency}
-                        onClick={() => handleCompleteGoal(goal.id)}
-                    >
-                        <Plus className="size-4 text-zinc-600" />
-                        {goal.title}
-                    </OutlineButton>
-                )
-            })}
+            {data.map((goal) => (
+                <OutlineButton
+                    key={goal.id}
+                    disabled={goal.completionsCount >= goal.desiredWeeklyFrequency}
+                    onClick={() => handleCompleteGoal(goal.id)}
+                >
+                    <Plus className="size-4 text-zinc-600" />
+                    {goal.title}
+                </OutlineButton>
+            ))}
         </div>
-    )
+    );
 }
